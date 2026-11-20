@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from station.closing.readiness import check_readiness
 from station.closing.repository import ClosingRepository
 from station.closing.tally import tally_conclusions
+from station.intake.gain import GainStore
 from station.intake.repository import IntakeRepository
 from station.lookup.round import RoundResult, resolve_report
 from station.lookup.verification import ReferenceIntegrityError
@@ -29,7 +30,7 @@ def close(connection: sqlite3.Connection, round_id: str) -> CloseResult:
             if stored is None:
                 raise ReferenceIntegrityError(f'sealed round {round_id!r} has no report')
             return CloseResult((), resolve_report(connection, stored))
-        readiness = check_readiness(active_round, intake)
+        readiness = check_readiness(active_round, intake, GainStore(connection))
         if readiness.pending:
             return CloseResult(readiness.pending, None)
         counts = tally_conclusions(readiness.conclusions)

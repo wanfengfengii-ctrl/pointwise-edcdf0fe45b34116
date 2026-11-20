@@ -14,6 +14,7 @@ from station.device.optical import apply_observation
 from station.device.recording import DeviceRecording
 from station.device.trigger import trigger
 from station.intake.accept import accept
+from station.intake.gain import GainStore
 from station.intake.receipt import ReceiptStore
 from station.intake.repository import IntakeRepository
 from station.lookup.round import get_round
@@ -32,6 +33,7 @@ def initialize_station(connection: sqlite3.Connection) -> None:
         DeviceRecording(connection).initialize()
         IntakeRepository(connection).initialize()
         ReceiptStore(connection).initialize()
+        GainStore(connection).initialize()
         ClosingRepository(connection).initialize()
 
 
@@ -141,8 +143,9 @@ def run_scenario(database: str | Path, fixture_path: str | Path) -> dict:
         'downstream_expected': scenario.expected['archive'],
         'downstream_actual': archive,
         'code_paths': ['station/device/optical.py', 'station/intake/accept.py',
-                       'station/intake/grading.py', 'station/closing/seal.py',
-                       'station/lookup/sample.py', 'station/lookup/round.py'],
+                       'station/intake/grading.py', 'station/intake/gain.py',
+                       'station/closing/seal.py', 'station/lookup/sample.py',
+                       'station/lookup/round.py'],
         'oracle': 'Hand-calculated fixture delivery order, strict integer comparison, roster tally and original ticks.',
     }
     print('POINTWISE_SCENARIO ' + json.dumps(evidence, sort_keys=True))
@@ -151,12 +154,19 @@ def run_scenario(database: str | Path, fixture_path: str | Path) -> dict:
     return result
 
 
+def _is_gain_fixture(path: str | Path) -> bool:
+    with Path(path).open(encoding='utf-8') as source:
+        return 'device_fixture' in json.load(source)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description='Run or audit the optical inspection station')
     actions = parser.add_subparsers(dest='action', required=True)
     actions.add_parser('init').add_argument('database')
     demo = actions.add_parser('demo')
     demo.add_argument('fixtures', nargs='+')
+    gain_demo = actions.add_parser('gain-demo')
+    gain_demo.add_argument('fixtures', nargs='+')
     run = actions.add_parser('run')
     run.add_argument('database')
     run.add_argument('fixture')
@@ -168,7 +178,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.action == 'demo':
         for fixture in args.fixtures:
             with TemporaryDirectory(prefix='optical-station-') as directory:
-                run_scenario(Path(directory) / 'station.sqlite3', fixture)
+                if _is_gain_fixture(fixture):
+                    from station.rounds.gain_demo import run_gain_scenario
+
+                    run_gain_scenario(Path(directory) / 'station.sqlite3', fixture)
+                else:
+                    run_scenario(Path(directory) / 'station.sqlite3', fixture)
+    elif args.action == 'gain-demo':
+        from station.rounds.gain_demo import run_gain_scenario
+
+        for fixture in args.fixtures:
+            with TemporaryDirectory(prefix='optical-gain-') as directory:
+                run_gain_scenario(Path(directory) / 'station.sqlite3', fixture)
     elif args.action == 'run':
         run_scenario(args.database, args.fixture)
     elif args.action == 'init':
@@ -177,8 +198,17 @@ def main(argv: list[str] | None = None) -> int:
     else:
         database_uri = Path(args.database).resolve().as_uri() + '?mode=ro'
         with closing(sqlite3.connect(database_uri, uri=True)) as offline:
-            retrieve = get_sample if args.action == 'sample' else get_round
-            print(json.dumps(asdict(retrieve(offline, args.number)), sort_keys=True))
+            if args.action == 'sample':
+                from station.lookup.sample import get_interval_sample
+
+                stored = GainStore(offline).find_receipt(args.number)
+                if stored is not None:
+                    print(json.dumps(get_interval_sample(offline, args.number),
+                                     sort_keys=True, default=asdict))
+                else:
+                    print(json.dumps(asdict(get_sample(offline, args.number)), sort_keys=True))
+            else:
+                print(json.dumps(asdict(get_round(offline, args.number)), sort_keys=True))
     return 0
 
 

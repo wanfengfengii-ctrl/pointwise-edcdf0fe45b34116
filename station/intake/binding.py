@@ -23,6 +23,8 @@ def verify_terminal(connection: sqlite3.Connection, order_id: str,
     order = rounds.find_order(order_id)
     if order is None:
         raise KeyError(f'unknown read order {order_id!r}')
+    if order.mode != 'point':
+        raise ValueError('interval read orders cannot use the point acceptance entry')
     recordings = DeviceRecording(connection)
     exposure = recordings.find_exposure(order_id)
     if exposure is None:

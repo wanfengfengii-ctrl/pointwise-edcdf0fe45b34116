@@ -1,0 +1,103 @@
+{
+  "case_id": "gain-v1",
+  "device_fixture": "examples/gain.json",
+  "rounds": [
+    {
+      "kind": "mixed",
+      "round_id": "gain-day",
+      "roster": ["Y", "P", "X", "M"],
+      "limit": 48,
+      "firings": [
+        {"piece": "Y", "gain": "high"},
+        {"piece": "P", "gain": "high"},
+        {"piece": "X", "gain": "high"},
+        {"piece": "X", "gain": "low"},
+        {"piece": "M", "gain": "high"}
+      ],
+      "expected": {
+        "fired": 5,
+        "statuses": {"Y": "over_limit", "P": "pass", "X": "pass", "M": "missing"},
+        "receipts": {"Y": "interval:1", "P": "interval:2", "X": "interval:3"},
+        "pending": [],
+        "report": "round:gain-day",
+        "pieces": [["Y", "over_limit"], ["P", "pass"], ["X", "pass"], ["M", "missing"]],
+        "counts": {"passed": 2, "over_limit": 1, "missing": 1},
+        "samples": {
+          "Y": {
+            "effective_interval": [49, null],
+            "originals": [
+              {"gain": "high", "exposure_id": "exposure:1", "tick": 10, "interval": [49, null]}
+            ]
+          },
+          "P": {
+            "effective_interval": [45, 48],
+            "originals": [
+              {"gain": "high", "exposure_id": "exposure:2", "tick": 11, "interval": [45, 48]}
+            ]
+          },
+          "X": {
+            "effective_interval": [48, 48],
+            "originals": [
+              {"gain": "high", "exposure_id": "exposure:3", "tick": 12, "interval": [48, 52]},
+              {"gain": "low", "exposure_id": "exposure:4", "tick": 13, "interval": [44, 48]}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "mixed",
+      "round_id": "gain-pending",
+      "roster": ["C", "U", "N"],
+      "limit": 48,
+      "firings": [
+        {"piece": "C", "gain": "high"},
+        {"piece": "C", "gain": "low"},
+        {"piece": "U", "gain": "high"},
+        {"piece": "U", "gain": "low"},
+        {"piece": "N", "gain": "high"},
+        {"piece": "N", "gain": "low"}
+      ],
+      "expected": {
+        "fired": 6,
+        "statuses": {"C": "conflict", "U": "indeterminate", "N": "indeterminate"},
+        "receipts": {},
+        "pending": ["C", "U", "N"],
+        "report": null,
+        "pieces": null,
+        "counts": null
+      }
+    },
+    {
+      "kind": "fault_before",
+      "round_id": "gain-lost-before",
+      "roster": ["X"],
+      "limit": 48,
+      "expected": {
+        "fired": 2,
+        "statuses": {"X": "pass"},
+        "receipts": {"X": "interval:5"},
+        "pending": [],
+        "pieces": [["X", "pass"]],
+        "counts": {"passed": 1, "over_limit": 0, "missing": 0},
+        "interrupted": {"history_unchanged": true, "recorded_low": false}
+      }
+    },
+    {
+      "kind": "fault_after",
+      "round_id": "gain-lost-after",
+      "roster": ["X"],
+      "limit": 48,
+      "expected": {
+        "fired": 2,
+        "statuses": {"X": "pass"},
+        "receipts": {"X": "interval:6"},
+        "pending": [],
+        "pieces": [["X", "pass"]],
+        "counts": {"passed": 1, "over_limit": 0, "missing": 0},
+        "rejections": ["forged interval", "foreign exposure"],
+        "signing_failure_left_conclusion": false
+      }
+    }
+  ]
+}

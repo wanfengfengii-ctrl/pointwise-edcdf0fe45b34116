@@ -31,6 +31,7 @@ class ReadOrder:
     round_id: str
     piece: str
     order_id: str
+    mode: str = 'point'
 
 
 class RoundRepository:
@@ -59,10 +60,16 @@ class RoundRepository:
                 order_id TEXT PRIMARY KEY NOT NULL,
                 round_id TEXT NOT NULL,
                 piece TEXT NOT NULL,
+                mode TEXT NOT NULL DEFAULT 'point' CHECK (mode IN ('point', 'interval')),
                 UNIQUE (round_id, piece),
                 FOREIGN KEY (round_id, piece) REFERENCES roster(round_id, piece)
             )
         ''')
+        columns = {row[1] for row in self.connection.execute('PRAGMA table_info(read_orders)')}
+        if 'mode' not in columns:
+            self.connection.execute(
+                "ALTER TABLE read_orders ADD COLUMN mode TEXT NOT NULL DEFAULT 'point'"
+            )
 
     def find_round(self, round_id: str) -> RoundRecord | None:
         row = self.connection.execute(
@@ -96,21 +103,21 @@ class RoundRepository:
 
     def find_order(self, order_id: str) -> ReadOrder | None:
         row = self.connection.execute(
-            'SELECT round_id, piece, order_id FROM read_orders WHERE order_id = ?', (order_id,)
+            'SELECT round_id, piece, order_id, mode FROM read_orders WHERE order_id = ?', (order_id,)
         ).fetchone()
         return None if row is None else ReadOrder(*row)
 
     def find_piece_order(self, round_id: str, piece: str) -> ReadOrder | None:
         row = self.connection.execute(
-            'SELECT round_id, piece, order_id FROM read_orders WHERE round_id = ? AND piece = ?',
+            'SELECT round_id, piece, order_id, mode FROM read_orders WHERE round_id = ? AND piece = ?',
             (round_id, piece),
         ).fetchone()
         return None if row is None else ReadOrder(*row)
 
     def insert_order(self, order: ReadOrder) -> ReadOrder:
         self.connection.execute(
-            'INSERT INTO read_orders (order_id, round_id, piece) VALUES (?, ?, ?)',
-            (order.order_id, order.round_id, order.piece),
+            'INSERT INTO read_orders (order_id, round_id, piece, mode) VALUES (?, ?, ?, ?)',
+            (order.order_id, order.round_id, order.piece, order.mode),
         )
         return order
 
