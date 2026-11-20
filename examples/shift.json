@@ -1,0 +1,31 @@
+{
+  "case_id": "v7",
+  "round_id": "shift-01",
+  "roster": ["C", "A", "B"],
+  "limit": 48,
+  "close_after": 1,
+  "exposures": [
+    {"piece": "A", "order_id": "shift-01/A", "deliver_at": 21, "observations": [
+      {"head": "left", "tick": 9, "kind": "empty"},
+      {"head": "left", "tick": 10, "kind": "reading", "raw_code": 49}
+    ]},
+    {"piece": "C", "order_id": "shift-01/C", "deliver_at": 26, "observations": [
+      {"head": "left", "tick": 12, "kind": "reading", "raw_code": 0}
+    ]},
+    {"piece": "B", "order_id": "shift-01/B", "deliver_at": 24, "observations": [
+      {"head": "left", "tick": 12, "kind": "empty"},
+      {"head": "left", "tick": 13, "kind": "end"}
+    ]}
+  ],
+  "expected": {
+    "intake": {"arrival": ["A", "B", "C"], "pending": ["C", "B"], "failed_once": []},
+    "archive": {
+      "pieces": [["C", "pass"], ["A", "over_limit"], ["B", "missing"]],
+      "counts": {"passed": 1, "over_limit": 1, "missing": 1},
+      "samples": {
+        "A": {"tick": 10, "raw_code": 49, "grade": "over_limit"},
+        "C": {"tick": 12, "raw_code": 0, "grade": "pass"}
+      }
+    }
+  }
+}

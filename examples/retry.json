@@ -1,0 +1,27 @@
+{
+  "case_id": "v5",
+  "round_id": "retry-01",
+  "roster": ["D", "E"],
+  "limit": 48,
+  "close_after": 1,
+  "fail_once_for": "D",
+  "exposures": [
+    {"piece": "D", "order_id": "retry-01/D", "deliver_at": 31, "observations": [
+      {"head": "left", "tick": 10, "kind": "reading", "raw_code": 48}
+    ]},
+    {"piece": "E", "order_id": "retry-01/E", "deliver_at": 12, "observations": [
+      {"head": "left", "tick": 11, "kind": "reading", "raw_code": 49}
+    ]}
+  ],
+  "expected": {
+    "intake": {"arrival": ["E", "D"], "pending": ["D"], "failed_once": ["D"]},
+    "archive": {
+      "pieces": [["D", "pass"], ["E", "over_limit"]],
+      "counts": {"passed": 1, "over_limit": 1, "missing": 0},
+      "samples": {
+        "D": {"tick": 10, "raw_code": 48, "grade": "pass"},
+        "E": {"tick": 11, "raw_code": 49, "grade": "over_limit"}
+      }
+    }
+  }
+}
